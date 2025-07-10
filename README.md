@@ -9,6 +9,7 @@ Not required, it's just a tiny shell script
 # Installation
 Self installing in bin:
 ``` bash
+chmod +x crun
 ./crun --install
 ```
 
