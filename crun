@@ -24,6 +24,8 @@ if [[ $# < 1 ]]; then
 fi
 
 g++ $1 -o $1.exe
-./$1.exe ${@:2}
+if [ $? -eq 0 ]; then
+	./$1.exe ${@:2}
+fi
 rm $1.exe
 
