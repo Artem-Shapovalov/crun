@@ -1,0 +1,29 @@
+#!/bin/bash
+
+if [ $1 == "--help"  ]; then
+	echo ""
+	echo "  # # #  # # #  #   #  # # #"
+	echo " #      #      #   #  #   #"
+	echo "# # #  #      # # #  #   #"
+	echo ""
+	echo "C++ runner"
+	echo "Usage: crun <cpp file> <arguments to run>"
+	echo "  --help    - this help"
+	echo "  --install - copies this script to /bin"
+	exit 0
+fi
+
+if [[ $1 == "--install" ]]; then
+	sudo cp crun /bin
+	exit 0
+fi
+
+if [[ $# < 1 ]]; then
+	echo "Too few arguments, see --help to get help"
+	exit -1
+fi
+
+g++ $1 -o $1.exe
+./$1.exe ${@:2}
+rm $1.exe
+
