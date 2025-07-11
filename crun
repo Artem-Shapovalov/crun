@@ -23,9 +23,291 @@ if [[ $# < 1 ]]; then
 	exit -1
 fi
 
-g++ $1 -o $1.exe
-if [ $? -eq 0 ]; then
-	./$1.exe ${@:2}
-fi
-rm $1.exe
+file=$1
+args=${@:2}
 
+if ! [ -f "$file" ]; then
+	echo "File not exists, generating"
+
+	echo "#include <iostream>" > $file
+	echo "#include <cstdio>" >> $file
+	echo "#include <string>" >> $file
+	echo "#include <vector>" >> $file
+	echo "#include <list>" >> $file
+	echo "#include <fstream>" >> $file
+	echo "#include <regex>" >> $file
+	echo "#include <filesystem>" >> $file
+	echo "#include <utility>" >> $file
+	echo "" >> $file
+
+	echo "// Expression evaluation engine" >> $file
+	echo "std::string ctx(std::string key); // reads the value from the global context" >> $file
+	echo "bool ctx(std::string key, std::string value); // writes the value to the global context" >> $file
+	echo "bool ctx_has_key(std::string key); // checks if the global context has requested value" >> $file
+	echo "std::string ctx_keys(); // returns all of the context keys for all of the values" >> $file
+	echo "std::string eval(std::string expr, bool is_subex=false); // evaluates expression substituting variables from the global context" >> $file
+	echo "" >> $file
+
+	echo "// Filesystem helpers" >> $file
+	echo "bool mkdir(std::string path);" >> $file
+	echo "bool touch(std::string path);" >> $file
+	echo "bool rm(std::string path);" >> $file
+	echo "bool cp(std::string src, std::string dst);" >> $file
+	echo "bool mv(std::string src, std::string dst);" >> $file
+	echo "std::list<std::string> ls(std::string path);" >> $file
+	echo "std::list<std::string> find(std::string pat, std::string re);" >> $file
+	echo "bool path_exists(std::string path);" >> $file
+	echo "std::string abspath(std::string path);" >> $file
+	echo "std::string curdir();" >> $file
+	echo "std::string dirname(std::string path);" >> $file
+	echo "bool is_file(std::string path);" >> $file
+	echo "bool is_dir(std::string path);" >> $file
+	echo "" >> $file
+
+	echo "class file" >> $file
+	echo "{" >> $file
+	echo "	public:" >> $file
+	echo "	file(std::string path);" >> $file
+	echo "" >> $file
+	echo "	bool write();" >> $file
+	echo "	bool read();" >> $file
+	echo "	std::string& operator[](size_t lineno);" >> $file
+	echo "	void append(std::string line);" >> $file
+	echo "	void insert_at(std::string line, size_t lineno);" >> $file
+	echo "	std::list<std::string> get_lines();" >> $file
+	echo "" >> $file
+	echo "	private:" >> $file
+	echo "	std::string current_path;" >> $file
+	echo "	std::list<std::string> lines;" >> $file
+	echo "};" >> $file
+	echo "" >> $file
+
+	echo "// Other helpers" >> $file
+	echo "std::vector<std::string> re_match(std::string line, std::string re);" >> $file
+	echo "std::string sed(std::string line, std::string re, std::string pattern);" >> $file
+	echo "int exec(std::string cmd);" >> $file
+	echo "" >> $file
+
+	echo "int main(int argc, char** argv)" >> $file
+	echo "{" >> $file
+	echo "	// Write your code here" >> $file
+	echo "	return 0;" >> $file
+	echo "}" >> $file
+	echo "" >> $file
+
+	echo "// Helpers implementation, don't change it" >> $file
+
+	echo "static std::map<std::string, std::string> ctx_values;" >> $file
+	echo "" >> $file
+
+	echo "std::string ctx(std::string key)" >> $file
+	echo "{" >> $file
+	echo "	if (ctx_values.empty())" >> $file
+	echo "	{" >> $file
+	echo "		return \"\";" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	if (ctx_values.find(key) == ctx_values.end())" >> $file
+	echo "	{" >> $file
+	echo "		return \"\";" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	return ctx_values[key];" >> $file
+	echo "}" >> $file
+	echo "" >> $file
+
+	echo "bool ctx(std::string key, std::string value)" >> $file
+	echo "{" >> $file
+	echo "	ctx_values[key] = value;" >> $file
+	echo "	return true;" >> $file
+	echo "}" >> $file
+	echo "" >> $file
+
+	echo "bool ctx_has_key(std::string key)" >> $file
+	echo "{" >> $file
+	echo "	if (ctx_values.find(key) == ctx_values.end())" >> $file
+	echo "	{" >> $file
+	echo "		return false;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	return true;" >> $file
+	echo "}" >> $file
+	echo "" >> $file
+
+	echo "std::string ctx_keys()" >> $file
+	echo "{" >> $file
+	echo "	std::string res;" >> $file
+	echo "" >> $file
+	echo "	for (std::map<std::string, std::string>::iterator i" >> $file
+	echo "			= ctx_values.begin();" >> $file
+	echo "		i != ctx_values.end();" >> $file
+	echo "		i++)" >> $file
+	echo "	{" >> $file
+	echo "		if (!res.empty())" >> $file
+	echo "		{" >> $file
+	echo "			res.append(\" \");" >> $file
+	echo "		}" >> $file
+	echo "" >> $file
+	echo "		res.append(i->first);" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	return res;" >> $file
+	echo "}" >> $file
+	echo "" >> $file
+
+	echo "static bool is_eval_escape(std::string& line, size_t pos)" >> $file
+	echo "{" >> $file
+	echo "	if (pos >= line.size())" >> $file
+	echo "	{" >> $file
+	echo "		return false;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	if (line[pos] != '\\\\')" >> $file
+	echo "	{" >> $file
+	echo "		return false;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	if (pos + 1 >= line.size())" >> $file
+	echo "	{" >> $file
+	echo "		return false;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	if (line[pos + 1] != '\\\\' && line[pos + 1] != '$')" >> $file
+	echo "	{" >> $file
+	echo "		return false;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	return true;" >> $file
+	echo "}" >> $file
+	echo "" >> $file
+
+	echo "static bool is_eval_open(std::string& line, size_t pos)" >> $file
+	echo "{" >> $file
+	echo "	if (pos >= line.size())" >> $file
+	echo "	{" >> $file
+	echo "		return false;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	if (line[pos] != '$')" >> $file
+	echo "	{" >> $file
+	echo "		return false;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	if (pos + 1 >= line.size())" >> $file
+	echo "	{" >> $file
+	echo "		return false;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	if (line[pos + 1] != '(')" >> $file
+	echo "	{" >> $file
+	echo "		return false;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	return true;" >> $file
+	echo "}" >> $file
+	echo "" >> $file
+
+	echo "static bool is_eval_close(std::string line, size_t pos, size_t& count)" >> $file
+	echo "{" >> $file
+	echo "	if (pos >= line.size())" >> $file
+	echo "	{" >> $file
+	echo "		return false;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	if (is_eval_open(line, pos))" >> $file
+	echo "	{" >> $file
+	echo "		count++;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	if (line[pos] != ')')" >> $file
+	echo "	{" >> $file
+	echo "		return false;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	if (count != 0)" >> $file
+	echo "	{" >> $file
+	echo "		return false;" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	return true;" >> $file
+	echo "}" >> $file
+	echo "" >> $file
+
+	echo "std::string eval(std::string expr, bool is_subex)" >> $file
+	echo "{" >> $file
+	echo "	if (is_subex)" >> $file
+	echo "	{" >> $file
+	echo "		return ctx(expr);" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	std::string res;" >> $file
+	echo "" >> $file
+	echo "	for (size_t i = 0; i < expr.size(); i++)" >> $file
+	echo "	{" >> $file
+	echo "		if (is_eval_escape(expr, i))" >> $file
+	echo "" >> $file
+	echo "		{" >> $file
+	echo "			i++;" >> $file
+	echo "			res.push_back(expr[i]);" >> $file
+	echo "		}" >> $file
+	echo "" >> $file
+	echo "		if (is_eval_open(expr, i))" >> $file
+	echo "		{" >> $file
+	echo "			i += 2;" >> $file
+	echo "" >> $file
+	echo "			std::string subex;" >> $file
+	echo "			size_t count = 0;" >> $file
+	echo "" >> $file
+	echo "			while (!is_eval_close(expr, i, count) &&" >> $file
+	echo "					i < expr.size())" >> $file
+	echo "			{" >> $file
+	echo "				subex.push_back(expr[i]);" >> $file
+	echo "				i++;" >> $file
+	echo "			}" >> $file
+	echo "			i++;" >> $file
+	echo "" >> $file
+	echo "			for (char s : eval(subex, true))" >> $file
+	echo "			{" >> $file
+	echo "				res.push_back(s);" >> $file
+	echo "			}" >> $file
+	echo "		}" >> $file
+	echo "" >> $file
+	echo "		res.push_back(expr[i]);" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	return res;" >> $file
+	echo "}" >> $file
+	echo "" >> $file
+
+	echo "std::vector<std::string> re_match(std::string line, std::string re)" >> $file
+	echo "{" >> $file
+	echo "	std::vector<std::string> res;" >> $file
+	echo "" >> $file
+	echo "	std::smatch m;" >> $file
+	echo "	if (std::regex_search(line, m, std::regex(re)))" >> $file
+	echo "	{" >> $file
+	echo "		for (std::string match : m)" >> $file
+	echo "		{" >> $file
+	echo "			res.push_back(match);" >> $file
+	echo "		}" >> $file
+	echo "	}" >> $file
+	echo "" >> $file
+	echo "	return res;" >> $file
+	echo "}" >> $file
+	echo "" >> $file
+
+	echo "std::string sed(std::string line, std::string re, std::string pattern)" >> $file
+	echo "{" >> $file
+	echo "	return std::regex_replace(line, std::regex(re), pattern," >> $file
+	echo "			std::regex_constants::format_sed);" >> $file
+	echo "}" >> $file
+	echo "" >> $file
+
+	exit 0
+fi
+
+g++ $file -o $file.exe
+if [ $? -eq 0 ]; then
+	./$file.exe $args
+fi
+rm $file.exe
